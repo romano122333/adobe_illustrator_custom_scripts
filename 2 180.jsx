@@ -1,5 +1,18 @@
+/**
+ * Character Animation Script for Adobe Illustrator
+ * Creates a sequence of character rotations from front view to profile view
+ * Handles both head and body animations separately
+ */
+
 function performTranslation() {
     var doc = app.activeDocument.layers[0];
+
+    // === UTILITY FUNCTIONS ===
+    
+    /**
+     * Calculates the bounding box of a layer including all its paths and plugin items
+     * Returns [xMin, yMax, xMax, yMin]
+     */
 
     function getLayerBounds(layer) {
         var objects = getAllPaths(layer);
@@ -21,6 +34,12 @@ function performTranslation() {
         }
         return bounds;
     }
+
+    /**
+     * Resizes a layer from its top anchor point
+     * @param {Layer} layer - Layer to resize
+     * @param {Number} s - Scale factor in percentage
+     */
 
     function resizeLayerTop(layer, s) { // s = newScale
         var items = getAllPaths(layer);
@@ -68,6 +87,10 @@ function performTranslation() {
         }
     }
 
+    /**
+     * Recursively gets all layers in the document including nested ones
+     */
+
     function getAllLayers(doc) {
         var allLayers = [];
         function exploreLayers(layerCollection) {
@@ -88,12 +111,21 @@ function performTranslation() {
         return allLayers;
     }
 
+
+
     function getLayerPosition(layer) {
         var bounds = getLayerBounds(layer);
         var xMid = (bounds[0] + bounds[2]) / 2; // Milieu en x
         var yMid = (bounds[1] + bounds[3]) / 2; // Milieu en y
         return [xMid, yMid]; // Retourne la position centrale du calque
     }
+
+    /**
+     * Gets a layer by its name
+     * @param {Document} doc - The document object
+     * @param {String} layerName - The name of the layer to find
+     * @returns {Layer} The layer object if found, otherwise null
+     */
 
     function getLayerByName(doc, layerName) {
         var layers = getAllLayers(doc);
@@ -104,7 +136,13 @@ function performTranslation() {
         }
         return null; // Si aucun calque ne correspond au nom
     }
-    
+
+    /**
+     * Duplicates a layer and its sublayers
+     * @param {Layer} originalLayer - The layer to duplicate
+     * @param {String} newName - The name of the new layer
+     * @returns {Layer} The newly created layer
+    */    
     function duplicateLayer(originalLayer, newName) {
         // Déterminer l'emplacement du layer à dupliquer
         var emplacement = originalLayer.parent;
@@ -146,6 +184,10 @@ function performTranslation() {
         return newLayer; // Retourner le nouveau calque créé
     }
 
+    /**
+     * Flips a layer horizontally
+     * @param {Layer} layer - The layer to flip
+     */
     function flipLayer(layer) {
         var layerBounds = getLayerBounds(layer); // [xMin, yMax, xMax, yMin]
         var layerCenter = (layerBounds[0] + layerBounds[2]) / 2;
@@ -174,7 +216,13 @@ function performTranslation() {
             }
         }
     }
-    
+
+    /**
+     * Translates and scales a layer
+     * @param {Layer} layer - The layer to translate and scale
+     * @param {Array} trSc - Translation and scale values [deltaX, scaleX]
+     * @param {Number} j - Current step index
+    */
     function translationLayer(layer, trSc, j) { // tr[0] = deltaX ; tr[1] = scaleX
         var deltaX = trSc[0];
         var scaleX = trSc[1];
@@ -197,7 +245,13 @@ function performTranslation() {
             }
         }
     }
-    
+
+    /**
+     * Moves a sublayer to the bottom of its parent layer
+     * @param {Layer} parentLayer - The parent layer
+     * @param {Layer} subLayer - The sublayer to move
+     * @returns {Boolean} True if the sublayer was moved, false otherwise
+     */
     function moveSubLayerToBottom(parentLayer, subLayer) {
         // Vérifier si le sous-calque est un sous-calque direct du calque parent
         if (parentLayer.layers.length > 0) {
@@ -210,7 +264,12 @@ function performTranslation() {
             }
         }
     }
-            
+
+    /**
+     * Gets the turn information for a specific step
+     * @param {Number} k - The step index
+     * @returns {Object} The turn information for the step
+     */
     function getTurnInfo(k) {
         if (k == 1) {
             var transLE = xMinBG + (5/4) * eyeLength;
@@ -254,6 +313,10 @@ function performTranslation() {
         return null;
     }
 
+    /**
+     * Gets the turn information for the body
+     * @returns {Object} The turn information for the body
+     */
     function getTurnBody() {
         var goalRA = leftArmPos;
         var goalLA = rightArmPos;
@@ -263,6 +326,12 @@ function performTranslation() {
         return dico;
     }
 
+    /**
+     * Rotates a layer
+     * @param {Layer} layer - The layer to rotate
+     * @param {Number} degree - The degree to rotate
+     * @param {Number} j - Current step index
+     */
     function rotateLayer(layer, degree, j) {
         // Convertir le degré en radians pour les calculs trigonométriques
         var newDegree = Math.sin((j*Math.PI)/(2*n)) * degree;
@@ -321,6 +390,11 @@ function performTranslation() {
         rotateItemsRecursively(layer);
     }
 
+    /**
+     * Gets all paths in a layer
+     * @param {Layer} layer - The layer to get paths from
+     * @returns {Array} All PathItems in the layer
+     */
     function getAllPaths(layer) {
         var allPaths = [];
     
@@ -357,7 +431,11 @@ function performTranslation() {
     
         return allPaths; // Retourne tous les PathItems trouvés
     }
-        
+
+    /**
+     * Checks if a layer exists in the document
+     * @returns {Layer} The layer object if found, otherwise null
+     */
     function headExists() {
         var allLayers = getAllLayers(doc);
         var headLayer = null;
@@ -377,6 +455,10 @@ function performTranslation() {
         return headLayer;
     }
 
+    /**
+     * Checks if a layer exists in the document
+     * @returns {Layer} The layer object if found, otherwise null
+     */
     function bodyExists() {
         var allLayers = getAllLayers(doc);
         var bodyLayer = null;
@@ -396,6 +478,11 @@ function performTranslation() {
         return bodyLayer;
     }
 
+    /**
+     * Checks if a layer exists in the document
+     * @param {String} name - The name of the layer to find
+     * @returns {Layer} The layer object if found, otherwise null
+     */
     function layerExists(name) {
         var allLayers = getAllLayers(doc);
         var layer = null;
@@ -415,10 +502,20 @@ function performTranslation() {
         return layer;
     }
 
+    /**
+     * Gets all plugin items in a layer
+     * @param {Layer} layer - The layer to get plugin items from
+     * @returns {Array} All PluginItems in the layer
+     */ 
     function f(x) {
         return (Math.sin((x-0.5)*Math.PI)+1)/2;
     }
 
+    /**
+     * Gets all plugin items in a layer
+     * @param {Layer} layer - The layer to get plugin items from
+     * @returns {Array} All PluginItems in the layer
+     */     
     function getAllPluginItems(layer) { // Nouvelle fonction
         var allPages = [];
     
@@ -467,7 +564,7 @@ function performTranslation() {
     var headLayer = headExists();
     var bodyLayer = bodyExists();
     
-    for (var z = 0; z < 1; z++) { // Appel des variables pour Head
+    for (var z = 0; z < 1; z++) {
         // Variables pour récupérer les informations sur le calque BG et +Left Eye
         var bgLayer = null;
         var eyeLayer = null;
@@ -512,7 +609,7 @@ function performTranslation() {
         var mouthLength = mouthBounds[2] - mouthBounds[0];
     }
 
-    for (var z = 0; z < 1; z++) { // Appel des variables pour Body
+    for (var z = 0; z < 1; z++) {
         var hipsLayer = null;
         var torsoLayer = null
         var leftArmLayer = null;
@@ -569,6 +666,9 @@ function performTranslation() {
     }
     var nezG = confirm("Le nez est-il orienté vers la gauche ?");
 
+    /**
+     * Turns the head
+     */
     function headTurn() {
         for (var k = 1; k < 9; k++) {
             if (k == 1) { 
@@ -699,26 +799,6 @@ function performTranslation() {
                     }
                 }
             }
-            // if (k == 5) {
-            //     var layers = doc.layers;
-            //     var longueur = layers.length - 1;
-            //     for (var j = 0; j < longueur; j++) {
-            //         var p = longueur - 1;
-            //         var layer = layers[p];
-            //         if (layer.name !== "Head") {
-            //             var rP = duplicateLayer(layer, layer.name);
-            //             renameLayers(rP, ["Left", "Raght"]);
-            //             renameLayers(rP, ["Right", "Left"]);
-            //             renameLayers(rP, ["Raght", "Right"]);
-            //             flipLayer(rP);
-            //         }
-            //     }
-            //     for (var j = 0; j < longueur; j++) {
-            //         var l = 2*n - j;
-            //         var rP = doc.layers[0].layers[l];
-            //         moveSubLayerToBottom(doc, rP);
-            //     }
-            // }
             if (k == 6) {
                 var fD = duplicateLayer(headLayer, "Left Profile Dos");
                 var tBD = [getLayerByName(fD, "+Left Eye"), getLayerByName(fD, "+Left Eyebrow"),
@@ -733,6 +813,9 @@ function performTranslation() {
         }
     }
 
+    /**
+     * Turns the body
+     */
     function bodyTurn() {
         for (var j = 0; j < (2 * n + 2); j++) {
             dico = getTurnBody(1);
@@ -803,4 +886,3 @@ function performTranslation() {
 }
 
 performTranslation();
-

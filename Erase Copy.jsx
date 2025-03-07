@@ -1,92 +1,112 @@
-// Fonction pour récupérer tous les calques du document, y compris les sous-calques
+/**
+ * Gets all layers in the document recursively, including sublayers
+ * @param {Document} doc - The document to get layers from
+ * @returns {Array} Array of all layers found
+ */
 function getAllLayers(doc) {
-  var allLayers = [];
-  
-  function exploreLayers(layerCollection) {
-      for (var i = 0; i < layerCollection.length; i++) {
-          var layer = layerCollection[i];
-          allLayers.push(layer); // Ajouter le calque à la liste
+    var allLayers = [];
+    
+    // Helper function to recursively explore layers
+    function exploreLayers(layerCollection) {
+        for (var i = 0; i < layerCollection.length; i++) {
+            var layer = layerCollection[i];
+            allLayers.push(layer);
 
-          // Si le calque contient des sous-calques, les explorer aussi
-          if (layer.layers.length > 0) {
-              exploreLayers(layer.layers);
-          }
-      }
-  }
+            // Recursively explore any sublayers
+            if (layer.layers.length > 0) {
+                exploreLayers(layer.layers);
+            }
+        }
+    }
 
-  // Commence avec les calques principaux du document
-  exploreLayers(doc.layers);
-
-  return allLayers;
+    exploreLayers(doc.layers);
+    return allLayers;
 }
 
-// Fonction principale pour supprimer les occurrences de "copy" ou "- copie"
+/**
+ * Main class to handle removing "copy" text from layer names
+ */
 var RemoveCopies = (function() {
-function RemoveCopies() {
-  this.maxNumber = parseInt(prompt("Jusqu'à quel nombre voulez-vous rechercher ?", "20"));
-  if (!isNaN(this.maxNumber) && this.maxNumber > 0) {
-    this.removeCopies();
-  } else {
-    alert("Veuillez entrer un nombre valide supérieur à 0.");
-  }
-}
 
-RemoveCopies.prototype.removeCopies = function() {
-  var doc = app.activeDocument;
-  if (doc) {
-    var allLayers = getAllLayers(doc); // Récupérer tous les calques
-    
-    for (var i = 1; i <= this.maxNumber; i++) {
-      var copyNameFR = "- copie " + i.toString();
-      var copyNameEN = "copy " + i.toString();
-      if (i === 1) {
-        copyNameFR = "- copie"; // Pour "- copie" sans nombre derrière (cas du premier calque)
-        copyNameEN = "copy"; // Pour "copy" sans nombre derrière
-      }
-      
-      this.renameLayers(allLayers, copyNameFR, copyNameEN);
-    }
-  } else {
-    alert("Aucun document ouvert.");
-  }
-};
-
-// Parcourir et renommer tous les calques
-RemoveCopies.prototype.renameLayers = function(allLayers, copyNameFR, copyNameEN) {
-  for (var i = 0; i < allLayers.length; i++) {
-    var currentLayer = allLayers[i];
-    // Renommer le calque s'il contient le nom à supprimer
-    this.renameLayer(currentLayer, copyNameFR, copyNameEN);
-  }
-};
-
-// Fonction pour renommer un calque donné
-RemoveCopies.prototype.renameLayer = function(layer, copyNameFR, copyNameEN) {
-  if (layer.typename === "Layer") {
-    var originalName = layer.name;
-    var newName = originalName;
-    
-    // Remplacer les occurrences de "- copie n" ou "copy n" à la fin
-    newName = newName.replace(new RegExp(copyNameFR + "$", "g"), "");
-    newName = newName.replace(new RegExp(copyNameEN + "$", "g"), "");
-    
-    // Si c'est le cas du "- copie" ou "copy" sans nombre derrière
-    if (originalName.match(new RegExp("- copie$", "g"))) {
-      newName = newName.replace(new RegExp("- copie$", "g"), "");
-    }
-    if (originalName.match(new RegExp("copy$", "g"))) {
-      newName = newName.replace(new RegExp("copy$", "g"), "");
-    }
+    function RemoveCopies() {
+        // Get max number to search for from user (e.g. "copy 1" up to "copy 20")
+        this.maxNumber = parseInt(prompt("Up to what number would you like to search for?", "20"));
         
-    // Mise à jour du nom du calque si changement
-    if (newName !== originalName) {
-      layer.name = newName;
+        if (!isNaN(this.maxNumber) && this.maxNumber > 0) {
+            this.removeCopies();
+        } else {
+            alert("Please enter a valid number greater than 0.");
+        }
     }
-  }
-};
 
-return RemoveCopies;
+    /**
+     * Main function to remove copy text from all layer names
+     */
+    RemoveCopies.prototype.removeCopies = function() {
+        var doc = app.activeDocument;
+        
+        if (!doc) {
+            alert("No document open.");
+            return;
+        }
+
+        var allLayers = getAllLayers(doc);
+
+        // Check for both English "copy" and French "copie" variations
+        for (var i = 1; i <= this.maxNumber; i++) {
+            var copyFrench = "- copie " + i.toString();
+            var copyEnglish = "copy " + i.toString();
+            
+            // Special case for first copy which may not have a number
+            if (i === 1) {
+                copyFrench = "- copie";
+                copyEnglish = "copy"; 
+            }
+            
+            this.renameLayers(allLayers, copyFrench, copyEnglish);
+        }
+    };
+
+    /**
+     * Processes all layers to remove copy text
+     * @param {Array} layers - Array of layers to process
+     * @param {String} frenchText - French copy text to remove
+     * @param {String} englishText - English copy text to remove
+     */
+    RemoveCopies.prototype.renameLayers = function(layers, frenchText, englishText) {
+        for (var i = 0; i < layers.length; i++) {
+            this.renameLayer(layers[i], frenchText, englishText);
+        }
+    };
+
+    /**
+     * Renames a single layer by removing copy text
+     * @param {Layer} layer - Layer to rename
+     * @param {String} frenchText - French copy text to remove
+     * @param {String} englishText - English copy text to remove
+     */
+    RemoveCopies.prototype.renameLayer = function(layer, frenchText, englishText) {
+        if (layer.typename !== "Layer") return;
+
+        var originalName = layer.name;
+        var newName = originalName;
+
+        // Remove numbered copy text
+        newName = newName.replace(new RegExp(frenchText + "$", "g"), "");
+        newName = newName.replace(new RegExp(englishText + "$", "g"), "");
+
+        // Remove unnumbered copy text
+        newName = newName.replace(/- copie$/, "");
+        newName = newName.replace(/copy$/, "");
+
+        // Update layer name if changed
+        if (newName !== originalName) {
+            layer.name = newName;
+        }
+    };
+
+    return RemoveCopies;
 })();
 
-// Lancer le processus
-var removeCopies = new RemoveCopies();
+// Run the script
+new RemoveCopies();

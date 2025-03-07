@@ -1,26 +1,29 @@
-// Fonction pour créer des formes intermédiaires
+/**
+ * Creates intermediate shapes between two shapes by interpolating their points
+ * @param {PathItem} shape1 - The first shape to morph from
+ * @param {PathItem} shape2 - The second shape to morph to 
+ * @param {Number} steps - Number of intermediate shapes to create
+ * @returns {Array} Array of created intermediate PathItems
+ */
 function createIntermediateShapes(shape1, shape2, steps) {
     var intermediateShapes = [];
-    
-    // Vérifiez que les deux formes ont le même nombre de points
 
+    // Create each intermediate shape
     for (var i = 1; i <= steps; i++) {
-        // Créer une nouvelle forme vide pour chaque étape intermédiaire
-        var newPath = shape1.layer.pathItems.add(); // Ajouter un nouveau chemin
-        newPath.filled = true; // Si vous voulez les contours uniquement
-        newPath.stroked = true; // On laisse activé le contour
+        var newPath = shape1.layer.pathItems.add();
+        newPath.filled = true;
+        newPath.stroked = true;
 
-        // Pour chaque point des deux formes, on crée une interpolation
+        // For each point in the shapes
         for (var j = 0; j < shape1.pathPoints.length; j++) {
-            // Interpolation linéaire pour chaque point (entre shape1 et shape2)
+            // Calculate interpolated position for the new point
             var x = shape1.pathPoints[j].anchor[0] + (shape2.pathPoints[j].anchor[0] - shape1.pathPoints[j].anchor[0]) * (i / (steps + 1));
             var y = shape1.pathPoints[j].anchor[1] + (shape2.pathPoints[j].anchor[1] - shape1.pathPoints[j].anchor[1]) * (i / (steps + 1));
 
-            // Ajouter le point interpolé à la nouvelle forme
             var newPoint = newPath.pathPoints.add();
             newPoint.anchor = [x, y];
 
-            // Interpolation des poignées de direction (leftDirection et rightDirection)
+            // Calculate interpolated bezier handle positions
             var leftDirectionX = shape1.pathPoints[j].leftDirection[0] + (shape2.pathPoints[j].leftDirection[0] - shape1.pathPoints[j].leftDirection[0]) * (i / (steps + 1));
             var leftDirectionY = shape1.pathPoints[j].leftDirection[1] + (shape2.pathPoints[j].leftDirection[1] - shape1.pathPoints[j].leftDirection[1]) * (i / (steps + 1));
 
@@ -30,30 +33,30 @@ function createIntermediateShapes(shape1, shape2, steps) {
             newPoint.leftDirection = [leftDirectionX, leftDirectionY];
             newPoint.rightDirection = [rightDirectionX, rightDirectionY];
 
-            // Interpolation du type de point (pointu ou arrondi)
+            // Handle point type (smooth, corner etc)
+            // If point types match, keep it, otherwise switch halfway through
             if (shape1.pathPoints[j].pointType === shape2.pathPoints[j].pointType) {
-                // Si les deux points ont le même type, le type reste constant
                 newPoint.pointType = shape1.pathPoints[j].pointType;
             } else {
-                // Si les types de points diffèrent, interpoler en fonction de la progression
                 newPoint.pointType = (i <= steps / 2) ? shape1.pathPoints[j].pointType : shape2.pathPoints[j].pointType;
             }
         }
 
-        // Fermer la forme en reliant le dernier point au premier
-        newPath.closed = true; // Cela assure que la forme est fermée
-
+        newPath.closed = true;
         intermediateShapes.push(newPath);
     }
     return intermediateShapes;
 }
 
-// Fonction principale
+/**
+ * Main function that handles the shape morphing process
+ * Gets user input and validates the shapes before morphing
+ */
 function morphShapes() {
     var doc = app.activeDocument;
     var shapes = doc.selection;
 
-    // Vérifiez que l'utilisateur a sélectionné exactement deux formes
+    // Validate that exactly 2 shapes are selected
     if (shapes.length !== 2) {
         alert("Veuillez sélectionner exactement deux formes.");
         return;
@@ -62,25 +65,21 @@ function morphShapes() {
     var shape1 = shapes[0];
     var shape2 = shapes[1];
 
+    // Validate that shapes have same number of points
     if (shape1.pathPoints.length !== shape2.pathPoints.length) {
         alert("Les deux formes doivent avoir le même nombre de points. Forme du haut : " + shape1.pathPoints.length + " Forme du bas : " + shape2.pathPoints.length);
         return;
     }
 
-    // Demande à l'utilisateur le nombre d'images intermédiaires
+    // Get number of intermediate steps from user
     var steps = prompt("Entrez le nombre d'images intermédiaires :", "5");
     
-    // Vérifiez que l'entrée est un nombre valide
     if (steps === null || isNaN(steps) || steps <= 0) {
         alert("Veuillez entrer un nombre valide.");
         return;
     }
 
-    // Crée les formes intermédiaires
     createIntermediateShapes(shapes[0], shapes[1], parseInt(steps));
 }
-
-// Lancer le script
-
 
 morphShapes();
